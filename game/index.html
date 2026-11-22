@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>CORAL VISTA — Open-World Crime Game</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #1a0b2e; font-family: 'Segoe UI', Arial, sans-serif; color: #fff; }
+  #game-canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  .panel { position: absolute; background: rgba(12, 8, 28, 0.82); border: 2px solid rgba(255, 210, 61, 0.55); border-radius: 8px; padding: 8px 10px; backdrop-filter: blur(2px); box-shadow: 0 4px 18px rgba(0,0,0,0.5); }
+  .panel h3 { font-size: 12px; letter-spacing: 1px; color: #ffd23d; }
+  /* objective — top left */
+  #objective { top: 12px; left: 12px; width: 340px; border-left: 6px solid #ffd23d; }
+  #obj-title { font-size: 15px; font-weight: 900; color: #ffd23d; letter-spacing: 0.5px; }
+  #obj-text { font-size: 14px; font-weight: 700; margin-top: 2px; line-height: 1.3; }
+  #obj-stage { display: inline-block; background: #ffd23d; color: #111; font-size: 11px; font-weight: 900; padding: 1px 7px; border-radius: 4px; margin-top: 5px; }
+  #obj-timer { display: inline-block; color: #ff6f91; font-weight: 900; margin-left: 8px; font-size: 14px; }
+  #obj-next { font-size: 12px; color: #9ff5ff; margin-top: 3px; }
+  /* money / wanted — top right */
+  #status { top: 12px; right: 12px; width: 250px; text-align: right; border-right: 6px solid #19d3c5; }
+  #money { font-size: 30px; font-weight: 900; color: #2aff7a; text-shadow: 0 2px 0 #000; line-height: 1; }
+  #stars { font-size: 24px; letter-spacing: 2px; margin-top: 2px; }
+  .star { color: #555; text-shadow: 0 0 2px #000; }
+  .star.on { color: #ffd23d; text-shadow: 0 0 8px #ff9e3d; }
+  #clock { font-size: 15px; font-weight: 800; color: #fff; }
+  #respect { font-size: 12px; font-weight: 800; color: #19d3c5; }
+  #in-sight { display: none; background: #ff2233; color: #fff; font-weight: 900; font-size: 12px; padding: 2px 8px; border-radius: 4px; margin-top: 4px; }
+  /* dispatch — left, under objective */
+  #dispatch { top: 150px; left: 12px; width: 300px; }
+  #dispatch h3 { color: #ff6f91; }
+  #dispatch-count { font-size: 11px; color: #ffb3c1; }
+  .drow { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .dname { color: #fff; } .ddist { color: #9ff5ff; }
+  .dstat { padding: 0 6px; border-radius: 3px; font-size: 11px; background: #ff2233; color: #fff; }
+  .dstat.ROADBLOCK { background: #ffd23d; color: #111; }
+  .dstat.SPOTLIGHT { background: #19d3c5; color: #111; }
+  .dstat.FLANKING, .dstat.PURSUE { background: #4d8dff; }
+  .dmore { font-size: 11px; color: #aaa; margin-top: 3px; }
+  /* district — left middle */
+  #district { top: 330px; left: 12px; width: 210px; }
+  #district-name { font-size: 17px; font-weight: 900; color: #ff9e3d; }
+  #district-sub { font-size: 12px; color: #ccc; }
+  .bar { height: 8px; background: #333; border-radius: 4px; margin-top: 5px; overflow: hidden; }
+  .bar > div { height: 100%; background: linear-gradient(90deg, #19d3c5, #2aff7a); }
+  #standing-num { font-size: 11px; color: #9ff5ff; margin-top: 3px; }
+  /* minimap — bottom left */
+  #minimap-wrap { bottom: 12px; left: 12px; width: 190px; padding: 6px; }
+  #minimap { width: 176px; height: 176px; border-radius: 50%; border: 3px solid #ffd23d; display: block; background: #222; }
+  #health-row { margin-top: 6px; font-size: 12px; font-weight: 800; }
+  .hbar { height: 10px; background: #222; border-radius: 5px; overflow: hidden; margin: 2px 0 4px; }
+  #health-fill { height: 100%; background: linear-gradient(90deg, #2aff7a, #7affb0); width: 72%; }
+  #armor-fill { height: 100%; background: linear-gradient(90deg, #4d8dff, #9ff5ff); width: 55%; }
+  /* weapons — right middle */
+  #weapons { top: 190px; right: 12px; width: 336px; }
+  #weapon-slots { display: flex; gap: 4px; margin-top: 5px; }
+  .wslot { flex: 1; background: rgba(255,255,255,0.08); border: 2px solid transparent; border-radius: 6px; padding: 4px 2px; text-align: center; min-width: 0; }
+  .wslot.active { border-color: #ffd23d; background: rgba(255,210,61,0.25); }
+  .wslot.locked { opacity: 0.45; }
+  .wkey { font-size: 10px; color: #ffd23d; font-weight: 900; }
+  .wname { font-size: 9px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wammo { font-size: 10px; color: #9ff5ff; }
+  /* crew — right, under weapons */
+  #crew { top: 268px; right: 12px; width: 250px; }
+  .crow { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .ckey { background: #ff4fd8; color: #fff; font-weight: 900; border-radius: 4px; padding: 2px 7px; font-size: 13px; }
+  .cname { font-size: 13px; font-weight: 900; }
+  .cmember { font-size: 11px; color: #bbb; }
+  .ccd { margin-left: auto; font-size: 11px; font-weight: 800; color: #2aff7a; }
+  /* speed — bottom right */
+  #speedo { bottom: 12px; right: 12px; width: 250px; text-align: right; }
+  #speed-num { font-size: 56px; font-weight: 900; line-height: 0.9; color: #fff; text-shadow: 0 3px 0 #000; }
+  #speed-unit { font-size: 14px; font-weight: 800; color: #ffd23d; }
+  #car-name { font-size: 17px; font-weight: 900; color: #19d3c5; }
+  #car-cond-num { font-size: 12px; color: #ccc; }
+  #radio-name { font-size: 12px; color: #ff4fd8; font-weight: 700; margin-top: 3px; }
+  /* dialogue — bottom centre */
+  #dialogue { bottom: 14px; left: 50%; transform: translateX(-50%); width: 520px; display: none; border-left: 6px solid #ff4fd8; }
+  #dialogue.show { display: flex; gap: 10px; align-items: center; }
+  #dlg-face { width: 52px; height: 52px; border-radius: 8px; background: linear-gradient(135deg, #ff4fd8, #19d3c5); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; color: #fff; flex-shrink: 0; }
+  #dlg-name { font-size: 14px; font-weight: 900; color: #19d3c5; }
+  #dlg-role { font-size: 11px; color: #aaa; margin-left: 6px; }
+  #dlg-text { font-size: 14px; line-height: 1.35; margin-top: 2px; }
+  /* flash banner */
+  #flash { position: absolute; top: 44%; left: 50%; transform: translate(-50%, -50%); background: rgba(255, 34, 51, 0.9); border: 2px solid #ffd23d; padding: 10px 22px; border-radius: 8px; font-size: 20px; font-weight: 900; display: none; text-align: center; z-index: 30; }
+  #flash.show { display: block; }
+  #save-msg { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: #2aff7a; color: #111; font-weight: 900; padding: 4px 14px; border-radius: 6px; display: none; z-index: 30; }
+  #save-msg.show { display: block; }
+  #pkg-count { position: absolute; bottom: 210px; left: 12px; font-size: 12px; font-weight: 800; color: #ffd23d; background: rgba(12,8,28,0.8); padding: 3px 8px; border-radius: 5px; }
+  #help { position: absolute; bottom: 12px; left: 220px; font-size: 11px; color: rgba(255,255,255,0.75); background: rgba(0,0,0,0.45); padding: 4px 8px; border-radius: 5px; }
+  /* overlays */
+  .overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: linear-gradient(160deg, rgba(122,79,208,0.88), rgba(255,111,158,0.82) 45%, rgba(255,176,61,0.85)); z-index: 50; }
+  .overlay.show { display: flex; }
+  .card { width: 640px; max-width: 92vw; background: rgba(12, 8, 28, 0.94); border: 3px solid #ffd23d; border-radius: 14px; padding: 26px 30px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
+  .card h1 { font-size: 54px; font-weight: 900; letter-spacing: 2px; background: linear-gradient(90deg, #ff4f6d, #ffd23d, #19d3c5, #ff4fd8); -webkit-background-clip: text; background-clip: text; color: transparent; line-height: 1; }
+  .card h2 { font-size: 15px; color: #9ff5ff; letter-spacing: 3px; margin-top: 4px; }
+  .card p { font-size: 14px; line-height: 1.55; color: #ddd; margin: 12px 0; text-align: left; }
+  .feat { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 10px 0; }
+  .feat span { background: rgba(255,210,61,0.16); border: 1px solid #ffd23d; color: #ffd23d; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 20px; }
+  .btn { display: inline-block; background: linear-gradient(90deg, #ff4f6d, #ff9e3d); color: #fff; font-size: 18px; font-weight: 900; border: none; border-radius: 8px; padding: 12px 34px; cursor: pointer; margin: 6px; letter-spacing: 1px; }
+  .btn:hover { filter: brightness(1.15); }
+  .btn.alt { background: rgba(255,255,255,0.14); border: 2px solid #19d3c5; color: #19d3c5; font-size: 15px; padding: 9px 22px; }
+  .controls { font-size: 12px; color: #bbb; line-height: 1.7; text-align: left; columns: 2; margin-top: 10px; }
+  .controls b { color: #ffd23d; }
+  #mission-list { text-align: left; margin: 10px 0; }
+  .mrow { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .mrow.done { color: #2aff7a; } .mrow.active { color: #ffd23d; font-weight: 900; }
+  .grow { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1); text-align: left; }
+  .gname { font-weight: 900; font-size: 14px; } .gdesc { font-size: 12px; color: #bbb; }
+  .gbuy { background: #2aff7a; color: #111; font-weight: 900; border: none; border-radius: 6px; padding: 8px 14px; cursor: pointer; }
+  .gbuy:disabled { background: #555; color: #aaa; cursor: default; }
+  #garage-menu .card, #pause-menu .card { width: 520px; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.min.js" } }
+</script>
+</head>
+<body>
+<canvas id="game-canvas"></canvas>
+
+<div id="objective" class="panel">
+  <div id="obj-title">MISSION 1/10 · FIRST FARE</div>
+  <div id="obj-text">Pick up the courier van at Tide Docks</div>
+  <div><span id="obj-stage">STAGE 1/2</span><span id="obj-timer"></span></div>
+  <div id="obj-next">NEXT: Deliver the van to the Strand garage</div>
+</div>
+
+<div id="status" class="panel">
+  <div id="money">$6,420</div>
+  <div id="stars"><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span></div>
+  <div id="clock">17:45</div>
+  <div id="respect">RESPECT LV 2 · 390 RP</div>
+  <div id="in-sight">IN SIGHT</div>
+</div>
+
+<div id="dispatch" class="panel">
+  <h3>◆ CORAL PD DISPATCH <span id="dispatch-count">0 UNITS · 0★</span></h3>
+  <div id="dispatch-list"><div class="drow"><span class="dname">NO ACTIVE UNITS</span></div></div>
+</div>
+
+<div id="district" class="panel">
+  <div id="district-name">KORAL STRAND</div>
+  <div id="district-sub">Strand Boulevard</div>
+  <div class="bar"><div id="standing-fill" style="width:58%"></div></div>
+  <div id="standing-num">STANDING 58</div>
+</div>
+
+<div id="minimap-wrap" class="panel">
+  <canvas id="minimap" width="176" height="176"></canvas>
+  <div id="health-row">HEALTH <span id="health-num">100</span> · ARMOUR <span id="armor-num">55</span></div>
+  <div class="hbar"><div id="health-fill"></div></div>
+  <div class="hbar"><div id="armor-fill"></div></div>
+</div>
+
+<div id="weapons" class="panel">
+  <h3>WEAPONS <span style="color:#888;font-weight:400">1–7 to switch · click to fire</span></h3>
+  <div id="weapon-slots"></div>
+</div>
+
+<div id="crew" class="panel">
+  <h3>CREW ABILITIES</h3>
+  <div id="crew-list"></div>
+</div>
+
+<div id="speedo" class="panel">
+  <div><span id="speed-num">0</span> <span id="speed-unit">KM/H</span></div>
+  <div id="car-name">ON FOOT</div>
+  <div class="bar"><div id="car-cond-fill" style="width:100%;background:linear-gradient(90deg,#ff9e3d,#ffd23d)"></div></div>
+  <div id="car-cond-num">CONDITION 100%</div>
+  <div id="radio-name">♪ TIDE 98.4 — "Island Pop"</div>
+</div>
+
+<div id="dialogue" class="panel">
+  <div id="dlg-face">LM</div>
+  <div><span id="dlg-name">LUNA MARLOWE</span><span id="dlg-role">Fixer</span>
+  <div id="dlg-text">Welcome to Coral Vista. First job is waiting at the docks.</div></div>
+</div>
+
+<div id="flash"></div>
+<div id="save-msg">✓ SAVED</div>
+<div id="pkg-count">◆ 0/12 PACKAGES</div>
+<div id="help">WASD drive/walk · E enter car · Click shoot · Q radio · Z/X/C crew · G garage · T taxi · H rain · N time · M menu · P save</div>
+
+<div id="start-screen" class="overlay show">
+  <div class="card">
+    <h1>CORAL VISTA</h1>
+    <h2>AN OPEN-WORLD CRIME STORY · CORAL COAST</h2>
+    <p>You are <b style="color:#ffd23d">Rae Voss</b>, a wheelwoman fresh out of the Tide Docks. Fixer <b style="color:#19d3c5">Luna Marlowe</b> has ten jobs for you — repo runs, a casino vault, a five-star frenzy and the Vista Royale grand race. Steal cars, outrun Coral PD dispatch, build your crew and own all five districts of the sun-soaked coast.</p>
+    <div class="feat"><span>10 STORY MISSIONS</span><span>5-STAR DISPATCH + AIR ONE</span><span>8 CARS · 7 WEAPONS</span><span>GARAGE UPGRADES</span><span>CREW ABILITIES</span><span>STREET RACES</span><span>TAXI · COURIER</span><span>12 HIDDEN PACKAGES</span><span>DAY/NIGHT + RAIN</span><span>4 RADIO STATIONS</span><span>SAVES</span><span>5 DISTRICTS</span></div>
+    <button id="start-btn" class="btn">▶ START ENGINE</button>
+    <button id="load-btn" class="btn alt">LOAD SAVE</button>
+    <div class="controls">
+      <div><b>WASD / Arrows</b> — drive &amp; walk</div><div><b>E</b> — enter / exit car</div>
+      <div><b>Mouse</b> — click to shoot, drag to look</div><div><b>1–7</b> — switch weapon</div>
+      <div><b>Q</b> — radio station</div><div><b>Z / X / C</b> — crew abilities</div>
+      <div><b>G</b> — garage (near Strand)</div><div><b>T</b> — taxi fare</div>
+      <div><b>H</b> — rain · <b>N</b> — time of day</div><div><b>M / Esc</b> — menu · <b>P</b> — save</div>
+    </div>
+  </div>
+</div>
+
+<div id="pause-menu" class="overlay">
+  <div class="card">
+    <h1 style="font-size:36px">PAUSED</h1>
+    <h2>MISSIONS — CORAL VISTA</h2>
+    <div id="mission-list"></div>
+    <button id="resume-btn" class="btn">RESUME</button>
+    <button id="save-btn" class="btn alt">SAVE GAME</button>
+    <button id="quit-btn" class="btn alt">QUIT TO TITLE</button>
+  </div>
+</div>
+
+<div id="garage-menu" class="overlay">
+  <div class="card">
+    <h1 style="font-size:32px">STRAND GARAGE</h1>
+    <h2>LIO'S WORKSHOP — UPGRADES</h2>
+    <div id="garage-list"></div>
+    <button id="close-garage-btn" class="btn">BACK TO THE STREET</button>
+  </div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
