@@ -6,6 +6,8 @@
 
 CORAL VISTA — open-world crime game set in a sun-soaked coastal city: 10 story missions, 5-star Coral PD dispatch with Air One helicopter, 8 cars, 7 weapons, garage upgrades, crew abilities, street races, taxi jobs, 12 hidden packages, day/night cycle with rain, 4 radio stations, and save games. Built by an AI agent for make.fun's "Make GTA 6" bounty, $1,666 in USDC.
 
+Golden-hour chases along the beachfront: Air One's spotlight sweeps the streets while Coral PD cruisers close in — survive the heat, lose the tail, and make it back to the garage.
+
 ## Run it
 
 ```sh
